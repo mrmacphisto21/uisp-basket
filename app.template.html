@@ -1,0 +1,772 @@
+<title>Basket UISP Varese</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: scoreboard header band, segmented girone switch, tabbed panels; tables scroll inside their own box */
+:root {
+  --bg: #f5f3ef; --surface: #ffffff; --ink: #1b2230; --muted: #6a6f78; --line: #e3dfd7;
+  --accent: #d9530f; --accent-soft: #fbe7dc; --band: #1b2230; --band-ink: #f5f3ef;
+  --win: #1f7a4d; --win-soft: #dcefe4; --loss: #b3352b; --loss-soft: #f6dedb;
+  --bar2: #3a5a8c; --bar3: #d9530f; --bar1: #9aa3b0;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --surface: #1a2029; --ink: #e9e6e0; --muted: #9aa0a9; --line: #2b323d;
+  --accent: #f07a3a; --accent-soft: #3a2519; --band: #0b0e13; --band-ink: #e9e6e0;
+  --win: #5cc28d; --win-soft: #183427; --loss: #ef7d72; --loss-soft: #3b1f1c;
+  --bar2: #7d9fd6; --bar3: #f07a3a; --bar1: #6b7480; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --ink: #e9e6e0; --muted: #9aa0a9; --line: #2b323d;
+  --accent: #f07a3a; --accent-soft: #3a2519; --band: #0b0e13; --band-ink: #e9e6e0;
+  --win: #5cc28d; --win-soft: #183427; --loss: #ef7d72; --loss-soft: #3b1f1c;
+  --bar2: #7d9fd6; --bar3: #f07a3a; --bar1: #6b7480; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.45 }
+.wrap { max-width: 1100px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+header.band { background: var(--band); color: var(--band-ink) }
+header.band .wrap { padding-block: 20px 0; display: flex; flex-direction: column; gap: 14px }
+.toprow { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px }
+h1 { font-family: var(--display); font-weight: 700; font-size: 2.4rem; line-height: 1; margin: 0; letter-spacing: .01em; text-transform: uppercase }
+h1 span:not(.cname) { color: var(--accent) }
+.pickers { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.campsel { font: 600 1rem var(--display); letter-spacing: .04em; text-transform: uppercase; background: var(--band); color: var(--band-ink); border: 1px solid color-mix(in srgb, var(--band-ink) 30%, transparent); border-radius: 6px; padding: 6px 10px; max-width: 100% }
+.seg { flex-wrap: wrap }
+.sub { font-size: .8rem; opacity: .7; margin-top: 4px }
+.seg { display: inline-flex; border: 1px solid color-mix(in srgb, var(--band-ink) 30%, transparent); border-radius: 6px; overflow: hidden }
+.seg button { font: 600 1rem var(--display); letter-spacing: .06em; text-transform: uppercase; background: transparent; color: var(--band-ink); border: 0; padding: 6px 16px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff }
+.updbtn { font: 600 1rem var(--display); letter-spacing: .06em; text-transform: uppercase; background: transparent; color: var(--band-ink); border: 1px solid var(--accent); border-radius: 6px; padding: 6px 14px; cursor: pointer }
+.updbtn:hover:not(:disabled) { background: var(--accent); color: #fff }
+.updbtn:disabled { opacity: .6; cursor: progress }
+.updmsg { font-size: .8rem; margin-top: 6px; color: var(--band-ink) }
+.updmsg:empty { display: none }
+.updmsg.err { color: #ffb3a8 }
+nav.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none }
+nav.tabs a { font: 600 1.05rem var(--display); letter-spacing: .05em; text-transform: uppercase; color: var(--band-ink); opacity: .65; text-decoration: none; padding: 8px 12px 10px; border-bottom: 3px solid transparent; white-space: nowrap }
+nav.tabs a.on { opacity: 1; border-bottom-color: var(--accent) }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+main .wrap { padding-block: 20px 48px; display: flex; flex-direction: column; gap: 20px }
+h2 { font: 700 1.5rem var(--display); text-transform: uppercase; letter-spacing: .02em; margin: 0; text-wrap: balance }
+h3 { font: 600 1.15rem var(--display); text-transform: uppercase; letter-spacing: .03em; margin: 0 }
+.muted { color: var(--muted) }
+.note { font-size: .82rem; color: var(--muted); max-width: 70ch }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px }
+.tblbox { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums }
+th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line) }
+th { font: 600 .78rem var(--body); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--surface); position: sticky; top: 0 }
+th.l, td.l { text-align: left }
+tr:last-child td { border-bottom: 0 }
+td.team { font-weight: 600; white-space: normal; min-width: 150px }
+td.big { font: 700 1.15rem var(--display) }
+th.sort { cursor: pointer; user-select: none }
+th.sort.on { color: var(--accent) }
+tr.click { cursor: pointer }
+tr.click:hover td { background: color-mix(in srgb, var(--accent-soft) 50%, transparent) }
+.pos { font: 700 1.1rem var(--display); color: var(--muted); width: 32px; text-align: center }
+.form { display: inline-flex; gap: 3px }
+.form i { font: 700 .72rem var(--body); font-style: normal; width: 18px; height: 18px; border-radius: 3px; display: inline-grid; place-items: center }
+.form .W { background: var(--win-soft); color: var(--win) }
+.form .L { background: var(--loss-soft); color: var(--loss) }
+.pos-diff { color: var(--win) } .neg-diff { color: var(--loss) }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px }
+.kpi { padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+.kpi .lab { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+.kpi .val { font: 700 2rem var(--display); line-height: 1.1 }
+.kpi .who { font-size: .85rem; font-weight: 500; overflow-wrap: anywhere }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+select, input[type=search] { font: 500 .9rem var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; max-width: 100% }
+label.chk { display: inline-flex; gap: 6px; align-items: center; font-size: .88rem }
+.rounds { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px }
+.rounds button { font: 600 .95rem var(--display); letter-spacing: .03em; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap }
+.rounds button.done { border-color: color-mix(in srgb, var(--ink) 35%, var(--line)) }
+.rounds button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+
+.games { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px }
+.game { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100% }
+.game[disabled] { cursor: default }
+.game:not([disabled]):hover { border-color: var(--accent) }
+.game .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center }
+.game .tn { font-weight: 500; overflow-wrap: anywhere }
+.game .sc { font: 700 1.6rem var(--display); min-width: 2.2ch; text-align: right; font-variant-numeric: tabular-nums }
+.game .w .tn { font-weight: 700 } .game .lo { color: var(--muted) }
+.game .meta { font-size: .78rem; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap }
+.chip { font: 600 .7rem var(--body); text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent) }
+.chip.gray { background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted) }
+
+dialog { border: 0; padding: 0; border-radius: 10px; background: var(--surface); color: var(--ink); width: min(920px, calc(100vw - 24px)); max-height: calc(100dvh - 32px) }
+dialog::backdrop { background: rgb(0 0 0 / .55) }
+.dlg { padding: 20px; display: flex; flex-direction: column; gap: 18px }
+.dlg .head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; text-align: center }
+.dlg .head .tn { font: 600 1.1rem var(--display); text-transform: uppercase; overflow-wrap: anywhere }
+.dlg .head .sc { font: 700 2.6rem var(--display); white-space: nowrap }
+.close { position: sticky; top: 0; align-self: flex-end; font: 600 .85rem var(--body); background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer }
+.boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px }
+.boxes > div { min-width: 0; display: flex; flex-direction: column; gap: 6px }
+tfoot td { font-weight: 700; border-top: 2px solid var(--line) }
+
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px }
+.split > * { min-width: 0 }
+.card { padding: 16px; display: flex; flex-direction: column; gap: 12px }
+.qbars { display: flex; flex-direction: column; gap: 8px }
+.qbar { display: grid; grid-template-columns: 30px 1fr 44px; gap: 8px; align-items: center; font-size: .82rem }
+.qbar .tr { display: flex; flex-direction: column; gap: 2px }
+.qbar .b { height: 9px; border-radius: 2px }
+.qbar .f { background: var(--accent) } .qbar .a { background: var(--bar1) }
+.qbar .v { font-variant-numeric: tabular-nums; text-align: right; line-height: 1.25 }
+.legend { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); flex-wrap: wrap }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px }
+.stack { display: flex; height: 22px; border-radius: 4px; overflow: hidden }
+.stack div { display: grid; place-items: center; font: 600 .72rem var(--body); color: #fff; min-width: 0; overflow: hidden }
+.mini { width: 100%; font-size: .85rem }
+.mini td { padding: 6px 8px }
+.res-w { color: var(--win); font-weight: 700 } .res-l { color: var(--loss); font-weight: 700 }
+.cb { display: flex; flex-direction: column; gap: 7px }
+.cb-row { display: grid; grid-template-columns: 22px minmax(0, 210px) 1fr 52px; gap: 10px; align-items: center; font-size: .86rem }
+.cb-pos { font: 700 1rem var(--display); color: var(--muted); text-align: center }
+.cb-name { font-weight: 600; overflow-wrap: anywhere; line-height: 1.2 }
+.cb-track { position: relative; height: 14px; background: color-mix(in srgb, var(--muted) 10%, transparent); border-radius: 3px; overflow: hidden }
+.cb-track.signed::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--muted) }
+.cb-bar { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 3px }
+.cb-val { font: 700 1.05rem var(--display); text-align: right; font-variant-numeric: tabular-nums }
+.h2h { display: flex; flex-direction: column; gap: 6px }
+.h-row { display: grid; grid-template-columns: 52px 1fr minmax(110px, 170px) 1fr 52px; gap: 8px; align-items: center; font-size: .82rem }
+.h-v { font-variant-numeric: tabular-nums; color: var(--muted) } .h-v.r { text-align: right }
+.h-v.best { color: var(--ink); font-weight: 700 }
+.h-lab { text-align: center; line-height: 1.2 }
+.h-track { height: 10px; display: flex; background: color-mix(in srgb, var(--muted) 10%, transparent); border-radius: 2px; overflow: hidden }
+.h-track.l { justify-content: flex-end }
+.h-track div { height: 100% }
+td.c-best { background: var(--win-soft); color: var(--win); font-weight: 700 }
+td.c-worst { background: var(--loss-soft); color: var(--loss) }
+@media (max-width: 560px) {
+  .cb-row { grid-template-columns: 18px minmax(0, 1fr) 46px; }
+  .cb-row .cb-track { grid-column: 2 / 4; grid-row: 2 }
+  .h-row { grid-template-columns: 44px 1fr 44px; }
+  .h-row .h-track { display: none }
+}
+footer { font-size: .78rem; color: var(--muted) }
+footer a { color: inherit }
+@media (max-width: 520px) { h1 { font-size: 1.9rem } .games { grid-template-columns: 1fr } .dlg .head .sc { font-size: 2rem } }
+@media (prefers-reduced-motion: no-preference) { .game, .rounds button { transition: border-color .15s } }
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <div class="toprow">
+      <div>
+        <h1><span id="cname" class="cname"></span> <span>Varese</span></h1>
+        <div class="sub" id="sub"></div>
+        <div class="updmsg" id="updmsg" role="status" aria-live="polite"></div>
+      </div>
+      <div class="pickers">
+        <select id="camp" class="campsel" aria-label="Campionato"></select>
+        <div class="seg" id="seg" role="group" aria-label="Girone"></div>
+        <button type="button" id="upd" class="updbtn" hidden title="Rilegge dal sito UISP il girone visualizzato">Aggiorna</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <a href="#classifica" data-t="classifica">Classifica</a>
+      <a href="#risultati" data-t="risultati">Risultati</a>
+      <a href="#giocatori" data-t="giocatori">Giocatori</a>
+      <a href="#squadre" data-t="squadre">Squadre</a>
+      <a href="#confronto" data-t="confronto">Confronto</a>
+    </nav>
+  </div>
+</header>
+<main><div class="wrap" id="view"></div></main>
+<dialog id="dlg"></dialog>
+
+<script>
+const DATA=/*__DATA__*/null;
+// copia "pulita" dei dati (prima dei campi derivati): è quella che si ripubblica dopo un aggiornamento
+const RAW = JSON.parse(JSON.stringify(DATA));
+// sorgente dell'app senza dati, per rigenerare la pagina intera
+const TPL=/*__TPL__*/"";
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const f1 = n => (Math.round(n * 10) / 10).toFixed(1).replace(".", ",");
+const MONTHS = { gennaio:0, febbraio:1, marzo:2, aprile:3, maggio:4, giugno:5, luglio:6, agosto:7, settembre:8, ottobre:9, novembre:10, dicembre:11 };
+function parseDate(d, t) {
+  const m = /(\d+)\s+(\w+)\s+(\d{4})/.exec(d || ""); if (!m) return 0;
+  const [h, mi] = (t || "0:0").split(":").map(Number);
+  return new Date(+m[3], MONTHS[m[2].toLowerCase()] ?? 0, +m[1], h || 0, mi || 0).getTime();
+}
+function shortName(g) {
+  let n = g.name || g.label || "";
+  if (n.includes("|")) n = n.split("|").pop().replace(/^\s*(Femminile|Maschile|Misto)\s+/i, "").replace(/\s*(UNDER\s*\d+|ESORDIENTI|FIRST LEAGUE|SECOND LEAGUE).*$/i, "");
+  const p = n.split(","); return (p[p.length - 1] || "").trim() || "Girone " + g.id;
+}
+const store = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
+
+// ---- derived data per girone
+for (const g of DATA.campionati.flatMap(c => c.gironi)) {
+  g.short = shortName(g);
+  g.matches.forEach(m => { m.ts = parseDate(m.date, m.time); m.played = m.hs != null && m.as != null; m.girone = g; });
+  g.rounds = [...new Set(g.matches.map(m => m.round + "-" + m.num))]
+    .map(k => { const [r, n] = k.split("-").map(Number); return { r, n, key: k, label: (r === 1 ? "Andata " : "Ritorno ") + n, matches: g.matches.filter(m => m.round === r && m.num === n) }; })
+    .sort((a, b) => a.r - b.r || a.n - b.n);
+  // giocatori
+  const P = new Map();
+  for (const m of g.matches) {
+    if (!m.box) continue;
+    for (const side of ["home", "away"]) {
+      const team = side === "home" ? m.home : m.away;
+      for (const p of m.box[side]) {
+        const k = team + "|" + p.name;
+        let r = P.get(k);
+        if (!r) P.set(k, r = { name: p.name, team, num: p.n, gp: 0, pts: 0, ft: 0, p2: 0, p3: 0, high: 0, cap: false, girone: g });
+        r.gp++; r.pts += p.pts; r.ft += p.ft; r.p2 += p.p2; r.p3 += p.p3; r.high = Math.max(r.high, p.pts); r.num = p.n ?? r.num; if (p.c === "C") r.cap = true;
+      }
+    }
+  }
+  g.players = [...P.values()];
+  // squadre
+  if (!g.standings?.length) {
+    // nessuna classifica sul sito: la calcolo dai risultati (2 punti a vittoria)
+    const S = new Map(); const row = n => S.get(n) || (S.set(n, { team: n, pt: 0, v: 0, s: 0, pf: 0, ps: 0 }), S.get(n));
+    for (const m of g.matches) { row(m.home); row(m.away); if (!m.played) continue;
+      const h = row(m.home), a = row(m.away); h.pf += m.hs; h.ps += m.as; a.pf += m.as; a.ps += m.hs;
+      if (m.hs > m.as) { h.v++; h.pt += 2; a.s++; } else if (m.as > m.hs) { a.v++; a.pt += 2; h.s++; } }
+    g.standings = [...S.values()].sort((x, y) => y.pt - x.pt || (y.pf - y.ps) - (x.pf - x.ps));
+    g.computedStandings = true;
+  }
+  g.teams = g.standings.map((s, i) => ({ ...s, pos: i + 1, g: s.v + s.s }));
+  for (const t of g.teams) {
+    const ms = g.matches.filter(m => m.played && (m.home === t.team || m.away === t.team)).sort((a, b) => a.ts - b.ts);
+    t.form = ms.slice(-5).map(m => { const us = m.home === t.team ? m.hs : m.as, them = m.home === t.team ? m.as : m.hs; return us > them ? "W" : "L"; });
+    t.games = ms;
+    // metriche per il confronto
+    const x = { bx: 0, ft: 0, p2: 0, p3: 0, oft: 0, op2: 0, op3: 0, scorers: 0, topShare: 0, nq: 0, qf: [0, 0, 0, 0], qa: [0, 0, 0, 0], cw: 0, cl: 0 };
+    const tp = new Map();
+    for (const m of ms) {
+      const home = m.home === t.team, us = home ? m.hs : m.as, th = home ? m.as : m.hs;
+      if (Math.abs(us - th) <= 10) { if (us > th) x.cw++; else x.cl++; }
+      if (m.q) {
+        const a = quarters(m.q[home ? 0 : 1]), b = quarters(m.q[home ? 1 : 0]);
+        if (a.length >= 4 && b.length >= 4) { x.nq++; for (let i = 0; i < 4; i++) { x.qf[i] += a[i] || 0; x.qa[i] += b[i] || 0; } }
+      }
+      if (m.box?.home?.length && m.box?.away?.length) {
+        const mine = m.box[home ? "home" : "away"], opp = m.box[home ? "away" : "home"];
+        x.bx++;
+        for (const p of mine) { x.ft += p.ft; x.p2 += p.p2; x.p3 += p.p3; if (p.pts > 0) x.scorers++; tp.set(p.name, (tp.get(p.name) || 0) + p.pts); }
+        for (const p of opp) { x.oft += p.ft; x.op2 += p.p2; x.op3 += p.p3; }
+      }
+    }
+    const boxPts = x.ft + x.p2 * 2 + x.p3 * 3;
+    x.topShare = boxPts ? Math.max(0, ...tp.values()) / boxPts : null;
+    x.boxPts = boxPts;
+    t.x = x;
+  }
+}
+function teamMetric(t, k) {
+  const x = t.x, g = t.g, bx = x.bx, nq = x.nq;
+  switch (k) {
+    case "pfg": return g ? t.pf / g : null;
+    case "psg": return g ? t.ps / g : null;
+    case "mrg": return g ? (t.pf - t.ps) / g : null;
+    case "p3g": return bx ? x.p3 / bx : null;
+    case "ftg": return bx ? x.ft / bx : null;
+    case "p2g": return bx ? x.p2 / bx : null;
+    case "sh3": return x.boxPts ? x.p3 * 3 / x.boxPts * 100 : null;
+    case "shft": return x.boxPts ? x.ft / x.boxPts * 100 : null;
+    case "op3g": return bx ? x.op3 / bx : null;
+    case "oftg": return bx ? x.oft / bx : null;
+    case "q1": return nq ? x.qf[0] / nq : null;
+    case "q1d": return nq ? (x.qf[0] - x.qa[0]) / nq : null;
+    case "q4d": return nq ? (x.qf[3] - x.qa[3]) / nq : null;
+    case "h2d": return nq ? (x.qf[2] + x.qf[3] - x.qa[2] - x.qa[3]) / nq : null;
+    case "scr": return bx ? x.scorers / bx : null;
+    case "top": return x.topShare != null ? x.topShare * 100 : null;
+    case "close": return (x.cw + x.cl) ? x.cw / (x.cw + x.cl) * 100 : null;
+  }
+}
+// [chiave, etichetta, meglio se alto?, formato, spiegazione]
+const METRICS = [
+  ["pfg", "Punti fatti / G", true, "f", "Media punti segnati a partita (classifica ufficiale)."],
+  ["psg", "Punti subiti / G", false, "f", "Media punti concessi a partita: più basso = difesa migliore."],
+  ["mrg", "Margine medio", true, "s", "Differenza media tra punti fatti e subiti."],
+  ["p3g", "Triple / G", true, "f", "Canestri da 3 segnati a partita."],
+  ["p2g", "Canestri da 2 / G", true, "f", "Canestri da 2 segnati a partita."],
+  ["ftg", "Liberi segnati / G", true, "f", "Tiri liberi segnati a partita: misura quanto la squadra attacca il ferro e si procura falli."],
+  ["sh3", "% punti da 3", null, "p", "Quota dei punti che arriva dall'arco: profilo dell'attacco, non un giudizio."],
+  ["shft", "% punti dai liberi", null, "p", "Quota dei punti che arriva dalla lunetta."],
+  ["op3g", "Triple concesse / G", false, "f", "Triple segnate dagli avversari: indica come si difende il perimetro."],
+  ["oftg", "Liberi concessi / G", false, "f", "Liberi segnati dagli avversari: indicatore indiretto dei falli commessi."],
+  ["q1", "Punti nel 1° quarto", true, "f", "Quanto parte forte la squadra."],
+  ["q1d", "Saldo 1° quarto", true, "s", "Differenza media fatti-subiti nel primo quarto."],
+  ["q4d", "Saldo 4° quarto", true, "s", "Differenza media nell'ultimo quarto: come si chiudono le partite."],
+  ["h2d", "Saldo 2° tempo", true, "s", "Differenza media nel secondo tempo: tenuta e aggiustamenti dall'intervallo."],
+  ["scr", "Marcatori a partita", true, "f", "Giocatori che vanno a segno in media: profondità della rotazione offensiva."],
+  ["top", "Dipendenza dal top scorer", null, "p", "Quota dei punti segnata dal miglior marcatore della squadra."],
+  ["close", "% vittorie punto a punto", true, "p", "Vittorie nelle partite finite con scarto di 10 punti o meno."]
+];
+function fmtMetric(v, f) { if (v == null || isNaN(v)) return "–"; if (f === "p") return Math.round(v) + "%"; if (f === "s") return (v > 0 ? "+" : "") + f1(v); return f1(v); }
+
+// nomi brevi dei gironi: se si ripetono nello stesso campionato uso il nome completo
+for (const c of DATA.campionati) {
+  const shorts = c.gironi.map(g => g.short);
+  if (new Set(shorts).size !== shorts.length) c.gironi.forEach(g => g.short = (g.name || g.label).replace(/,\s*UNICO$/i, ""));
+}
+const state = { c: 0, g: 0, tab: "classifica", round: null, sort: "ppg", dir: -1, team: "", q: "", min: 1, all: false, sqTeam: null };
+{ const sc = DATA.campionati.findIndex(c => String(c.id) === store.get("uisp.c")); if (sc >= 0) state.c = sc;
+  const sg = parseInt(store.get("uisp.g")); if (sg >= 0 && sg < DATA.campionati[state.c].gironi.length) state.g = sg; }
+const C = () => DATA.campionati[state.c];
+const G = () => C().gironi[state.g];
+const titleCase = s => String(s).toLowerCase().replace(/\b\p{L}/gu, ch => ch.toUpperCase());
+
+function resetView() { state.round = null; state.sqTeam = null; state.team = ""; state.ha = null; state.hb = null; }
+function renderSeg() {
+  const gs = C().gironi;
+  $("#seg").hidden = gs.length < 2;
+  $("#seg").innerHTML = gs.map((g, i) => `<button type="button" data-i="${i}" aria-pressed="${i === state.g}">${esc(g.short)}</button>`).join("");
+  $("#seg").querySelectorAll("button").forEach(b => b.onclick = () => { state.g = +b.dataset.i; resetView(); store.set("uisp.g", state.g); renderSeg(); render(); });
+  $("#cname").textContent = titleCase(C().nome);
+  $("#camp").innerHTML = DATA.campionati.map((c, i) => `<option value="${i}" ${i === state.c ? "selected" : ""}>${esc(c.nome)}</option>`).join("");
+  $("#sub").textContent = `${gs.length < 2 ? G().name + " · " : ""}Comitato ${DATA.comitato} · aggiornato ${G().updated && G().updated > DATA.generated ? G().updated : DATA.generated}`;
+}
+$("#camp").addEventListener("change", e => { state.c = +e.target.value; state.g = 0; resetView(); store.set("uisp.c", C().id); store.set("uisp.g", 0); renderSeg(); render(); });
+function teamCell(name) { return `<a href="#squadre" data-team="${esc(name)}" class="tlink" style="color:inherit;text-decoration:none">${esc(name)}</a>`; }
+function wireTeamLinks(root) { root.querySelectorAll("[data-team]").forEach(a => a.onclick = e => {
+  e.stopPropagation(); state.sqTeam = a.dataset.team;
+  const gi = C().gironi.findIndex(g => g.teams.some(t => t.team === a.dataset.team));
+  if (gi >= 0 && gi !== state.g) { state.g = gi; store.set("uisp.g", gi); renderSeg(); }
+  if (location.hash === "#squadre") { e.preventDefault(); render(); }
+}); }
+
+// ---- CLASSIFICA
+function viewClassifica() {
+  const g = G(), T = g.teams;
+  const played = g.matches.filter(m => m.played);
+  const att = [...T].sort((a, b) => b.pf / Math.max(b.g, 1) - a.pf / Math.max(a.g, 1))[0];
+  const def = [...T].filter(t => t.g).sort((a, b) => a.ps / a.g - b.ps / b.g)[0];
+  const top = [...g.players].sort((a, b) => b.pts / b.gp - a.pts / a.gp).filter(p => p.gp >= 2)[0] || [...g.players].sort((a, b) => b.pts - a.pts)[0];
+  const big = played.reduce((a, m) => Math.abs(m.hs - m.as) > Math.abs((a?.hs ?? 0) - (a?.as ?? 0)) ? m : a, null);
+  const avgTot = played.length ? played.reduce((s, m) => s + m.hs + m.as, 0) / played.length : 0;
+  return `
+  <div class="kpis">
+    <div class="panel kpi"><span class="lab">Miglior attacco</span><span class="val">${att ? f1(att.pf / Math.max(att.g, 1)) : "–"}</span><span class="who">${esc(att?.team)} · punti a partita</span></div>
+    <div class="panel kpi"><span class="lab">Miglior difesa</span><span class="val">${def ? f1(def.ps / def.g) : "–"}</span><span class="who">${esc(def?.team)} · punti subiti a partita</span></div>
+    <div class="panel kpi"><span class="lab">Top scorer (media)</span><span class="val">${top ? f1(top.pts / top.gp) : "–"}</span><span class="who">${esc(top?.name)} · ${esc(top?.team)}</span></div>
+    <div class="panel kpi"><span class="lab">Punti totali a partita</span><span class="val">${f1(avgTot)}</span><span class="who">${played.length} partite giocate${big ? ` · scarto max ${Math.abs(big.hs - big.as)}` : ""}</span></div>
+  </div>
+  <div class="panel tblbox"><table>
+    <thead><tr><th class="l" colspan="2">${esc(g.name)}</th><th>Pt</th><th>G</th><th>V</th><th>S</th><th>PF</th><th>PS</th><th>Diff</th><th>PF/G</th><th>PS/G</th><th class="l">Ultime 5</th></tr></thead>
+    <tbody>${T.map(t => { const d = t.pf - t.ps; return `<tr>
+      <td class="pos">${t.pos}</td><td class="l team">${teamCell(t.team)}</td><td class="big">${t.pt}</td><td>${t.g}</td><td>${t.v}</td><td>${t.s}</td><td>${t.pf}</td><td>${t.ps}</td>
+      <td class="${d > 0 ? "pos-diff" : d < 0 ? "neg-diff" : ""}">${d > 0 ? "+" : ""}${d}</td><td>${t.g ? f1(t.pf / t.g) : "–"}</td><td>${t.g ? f1(t.ps / t.g) : "–"}</td>
+      <td class="l"><span class="form">${t.form.map(r => `<i class="${r}" title="${r === "W" ? "Vittoria" : "Sconfitta"}">${r === "W" ? "V" : "S"}</i>`).join("")}</span></td></tr>`; }).join("")}</tbody>
+  </table></div>
+  <p class="note">${g.computedStandings ? "Il sito non pubblica la classifica di questo girone: è calcolata dai risultati (2 punti a vittoria)." : "Classifica ufficiale dal sito UISP (2 punti a vittoria)."} Diff, medie e ultime 5 sono calcolate dai risultati. Tocca una squadra per vederne la scheda.</p>`;
+}
+
+// ---- RISULTATI
+function gameCard(m) {
+  const hw = m.played && m.hs > m.as, aw = m.played && m.as > m.hs;
+  const status = !m.played ? `<span class="chip gray">Da giocare</span>` : m.box ? `<span class="chip">Tabellino</span>` : `<span class="chip gray">Solo risultato</span>`;
+  return `<button type="button" class="panel game" data-id="${m.id}" ${m.played ? "" : "disabled"}>
+    <div class="row ${hw ? "w" : aw ? "lo" : ""}"><span class="tn">${esc(m.home)}</span><span class="sc">${m.played ? m.hs : "–"}</span></div>
+    <div class="row ${aw ? "w" : hw ? "lo" : ""}"><span class="tn">${esc(m.away)}</span><span class="sc">${m.played ? m.as : "–"}</span></div>
+    <div class="meta"><span>${esc(m.date)} · ${esc(m.time)}</span>${status}</div>
+    <div class="meta"><span>${esc(m.venue)}</span></div>
+  </button>`;
+}
+function defaultRound(g) {
+  const lastPlayed = [...g.rounds].reverse().find(r => r.matches.some(m => m.played));
+  return (lastPlayed || g.rounds[0]).key;
+}
+function viewRisultati() {
+  const g = G(); if (!state.round || !g.rounds.find(r => r.key === state.round)) state.round = defaultRound(g);
+  const R = g.rounds.find(r => r.key === state.round);
+  const ms = [...R.matches].sort((a, b) => a.ts - b.ts);
+  return `<div class="rounds" id="rounds">${g.rounds.map(r => `<button type="button" data-k="${r.key}" class="${r.matches.some(m => m.played) ? "done" : ""}" aria-pressed="${r.key === state.round}">${r.label}</button>`).join("")}</div>
+  <h2>${R.label}</h2>
+  <div class="games">${ms.map(gameCard).join("")}</div>
+  <p class="note">Tocca una partita giocata per vedere parziali e tabellino. "Solo risultato": la società non ha ancora inserito i punti dei giocatori.</p>`;
+}
+function boxTable(team, rows) {
+  if (!rows?.length) return `<div><h3>${esc(team)}</h3><p class="muted">Tabellino non disponibile.</p></div>`;
+  const s = rows.reduce((a, p) => ({ ft: a.ft + p.ft, p2: a.p2 + p.p2, p3: a.p3 + p.p3, pts: a.pts + p.pts }), { ft: 0, p2: 0, p3: 0, pts: 0 });
+  const max = Math.max(...rows.map(p => p.pts));
+  return `<div><h3>${esc(team)}</h3><div class="tblbox"><table class="mini">
+    <thead><tr><th>#</th><th class="l">Giocatore</th><th title="Tiri liberi segnati">TL</th><th title="Tiri da 2 segnati">2P</th><th title="Tiri da 3 segnati">3P</th><th>Pti</th></tr></thead>
+    <tbody>${[...rows].sort((a, b) => b.pts - a.pts).map(p => `<tr><td class="muted">${p.n ?? ""}</td><td class="l" style="white-space:normal">${esc(p.name)}${p.c ? ` <span class="chip gray" title="${p.c === "C" ? "Capitano" : "Vice capitano"}">${p.c}</span>` : ""}</td><td>${p.ft}</td><td>${p.p2}</td><td>${p.p3}</td><td style="font-weight:${p.pts === max && max > 0 ? 700 : 400};color:${p.pts === max && max > 0 ? "var(--accent)" : "inherit"}">${p.pts}</td></tr>`).join("")}</tbody>
+    <tfoot><tr><td></td><td class="l">Totale</td><td>${s.ft}</td><td>${s.p2}</td><td>${s.p3}</td><td>${s.pts}</td></tr></tfoot>
+  </table></div></div>`;
+}
+function quarters(cum) { return cum ? cum.map((v, i) => v == null ? null : v - (i ? cum[i - 1] ?? 0 : 0)) : null; }
+function openGame(id) {
+  const m = G().matches.find(x => x.id === id) || C().gironi.flatMap(g => g.matches).find(x => x.id === id);
+  if (!m) return;
+  const qh = quarters(m.q?.[0]), qa = quarters(m.q?.[1]);
+  const qTable = qh && qa ? `<div class="tblbox"><table class="mini" style="max-width:520px;margin:0 auto">
+    <thead><tr><th class="l">Quarti</th>${qh.map((_, i) => `<th>${i < 4 ? i + 1 + "°" : "S" + (i - 3)}</th>`).join("")}<th>Tot</th></tr></thead>
+    <tbody><tr><td class="l">${esc(m.home)}</td>${qh.map((v, i) => `<td class="${v > qa[i] ? "res-w" : ""}">${v ?? "–"}</td>`).join("")}<td><b>${m.hs}</b></td></tr>
+    <tr><td class="l">${esc(m.away)}</td>${qa.map((v, i) => `<td class="${v > qh[i] ? "res-w" : ""}">${v ?? "–"}</td>`).join("")}<td><b>${m.as}</b></td></tr></tbody></table></div>` : "";
+  const d = $("#dlg");
+  d.innerHTML = `<div class="dlg">
+    <button type="button" class="close" id="dlgx">Chiudi</button>
+    <div class="head"><span class="tn">${esc(m.home)}</span><span class="sc">${m.hs} – ${m.as}</span><span class="tn">${esc(m.away)}</span></div>
+    <div class="muted" style="text-align:center;font-size:.85rem">${esc(m.date)} · ${esc(m.time)} · ${esc(m.venue)}${m.coach ? `<br>All.: ${esc(m.coach.home || "–")} / ${esc(m.coach.away || "–")}` : ""}</div>
+    ${qTable}
+    <div class="boxes">${boxTable(m.home, m.box?.home)}${boxTable(m.away, m.box?.away)}</div>
+  </div>`;
+  $("#dlgx").onclick = () => d.close();
+  d.onclick = e => { if (e.target === d) d.close(); };
+  d.showModal();
+}
+
+// ---- GIOCATORI
+const COLS = [
+  ["name", "Giocatore", "l"], ["team", "Squadra", "l"], ["gp", "PG"], ["pts", "Pti"], ["ppg", "Media"], ["high", "Max"],
+  ["ft", "TL"], ["p2", "2P"], ["p3", "3P"], ["p3g", "3P/G"], ["sh", "% da 3"]
+];
+function pval(p, k) {
+  switch (k) { case "ppg": return p.pts / p.gp; case "p3g": return p.p3 / p.gp; case "sh": return p.pts ? (p.p3 * 3) / p.pts : 0; default: return p[k]; }
+}
+function viewGiocatori() {
+  const src = state.all ? C().gironi.flatMap(g => g.players) : G().players;
+  const teams = [...new Set(src.map(p => p.team))].sort();
+  if (state.team && !teams.includes(state.team)) state.team = "";
+  const q = state.q.trim().toUpperCase();
+  let rows = src.filter(p => p.gp >= state.min && (!state.team || p.team === state.team) && (!q || p.name.includes(q)));
+  rows.sort((a, b) => { const x = pval(a, state.sort), y = pval(b, state.sort); return (typeof x === "string" ? x.localeCompare(y) : x - y) * state.dir || b.pts - a.pts; });
+  return `<div class="controls">
+    <input type="search" id="pq" placeholder="Cerca giocatore" value="${esc(state.q)}" aria-label="Cerca giocatore">
+    <select id="pteam" aria-label="Squadra"><option value="">Tutte le squadre</option>${teams.map(t => `<option ${t === state.team ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+    <select id="pmin" aria-label="Partite minime">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${n === state.min ? "selected" : ""}>Almeno ${n} ${n === 1 ? "partita" : "partite"}</option>`).join("")}</select>
+    <label class="chk"><input type="checkbox" id="pall" ${state.all ? "checked" : ""}> Entrambi i gironi</label>
+    <span class="muted" style="font-size:.85rem">${rows.length} giocatori</span>
+  </div>
+  <div class="panel tblbox" style="max-height:70vh"><table>
+    <thead><tr><th>#</th>${COLS.map(([k, l, c]) => `<th class="sort ${c || ""} ${state.sort === k ? "on" : ""}" data-k="${k}">${l}${state.sort === k ? (state.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((p, i) => `<tr><td class="muted">${i + 1}</td><td class="l" style="font-weight:600">${esc(p.name)}</td><td class="l">${teamCell(p.team)}</td>
+      <td>${p.gp}</td><td>${p.pts}</td><td class="big">${f1(p.pts / p.gp)}</td><td>${p.high}</td><td>${p.ft}</td><td>${p.p2}</td><td>${p.p3}</td><td>${f1(p.p3 / p.gp)}</td><td>${p.pts ? Math.round(p.p3 * 300 / p.pts) + "%" : "–"}</td></tr>`).join("")}</tbody>
+  </table></div>
+  <p class="note">PG = partite a referto con tabellino. TL, 2P, 3P = canestri segnati. "% da 3" è la quota dei punti arrivata da tre. Il sito non registra tiri tentati, rimbalzi, assist o falli, quindi niente percentuali al tiro.</p>`;
+}
+
+// ---- SQUADRE
+function viewSquadre() {
+  const g = G();
+  if (!state.sqTeam || !g.teams.find(t => t.team === state.sqTeam)) state.sqTeam = g.teams[0]?.team;
+  const t = g.teams.find(x => x.team === state.sqTeam);
+  if (!t) return `<p class="muted">Nessuna squadra in questo girone.</p>`;
+  const ps = g.players.filter(p => p.team === t.team).sort((a, b) => b.pts - a.pts);
+  // quarti medi
+  const qf = [], qa = []; let nq = 0;
+  for (const m of t.games) {
+    if (!m.q) continue; const home = m.home === t.team;
+    const us = quarters(m.q[home ? 0 : 1]), th = quarters(m.q[home ? 1 : 0]); nq++;
+    us.slice(0, 4).forEach((v, i) => qf[i] = (qf[i] || 0) + (v || 0)); th.slice(0, 4).forEach((v, i) => qa[i] = (qa[i] || 0) + (v || 0));
+  }
+  const qmax = Math.max(1, ...qf.map(v => v / nq), ...qa.map(v => v / nq));
+  // mix punti
+  const mix = ps.reduce((a, p) => ({ ft: a.ft + p.ft, p2: a.p2 + p.p2 * 2, p3: a.p3 + p.p3 * 3 }), { ft: 0, p2: 0, p3: 0 });
+  const mt = mix.ft + mix.p2 + mix.p3 || 1;
+  const pc = v => Math.round(v * 100 / mt);
+  return `<div class="controls"><select id="sq" aria-label="Squadra">${g.teams.map(x => `<option ${x.team === t.team ? "selected" : ""}>${esc(x.team)}</option>`).join("")}</select></div>
+  <h2>${esc(t.team)}</h2>
+  <div class="kpis">
+    <div class="panel kpi"><span class="lab">Posizione</span><span class="val">${t.pos}°</span><span class="who">${t.pt} punti · ${t.v}V ${t.s}S</span></div>
+    <div class="panel kpi"><span class="lab">Punti fatti / gara</span><span class="val">${t.g ? f1(t.pf / t.g) : "–"}</span><span class="who">${t.pf} totali</span></div>
+    <div class="panel kpi"><span class="lab">Punti subiti / gara</span><span class="val">${t.g ? f1(t.ps / t.g) : "–"}</span><span class="who">${t.ps} totali</span></div>
+    <div class="panel kpi"><span class="lab">Miglior marcatore</span><span class="val">${ps[0] ? f1(ps[0].pts / ps[0].gp) : "–"}</span><span class="who">${esc(ps[0]?.name ?? "–")}</span></div>
+  </div>
+  <div class="split">
+    <div class="panel card"><h3>Media per quarto</h3>
+      ${nq ? `<div class="legend"><span><i style="background:var(--accent)"></i>Fatti</span><span><i style="background:var(--bar1)"></i>Subiti</span><span>su ${nq} partite</span></div>
+      <div class="qbars">${[0, 1, 2, 3].map(i => `<div class="qbar"><span class="muted">${i + 1}°</span><div class="tr"><div class="b f" style="width:${(qf[i] / nq) / qmax * 100}%"></div><div class="b a" style="width:${(qa[i] / nq) / qmax * 100}%"></div></div><span class="v">${f1(qf[i] / nq)}<br><span class="muted">${f1(qa[i] / nq)}</span></span></div>`).join("")}</div>` : `<p class="muted">Nessun parziale disponibile.</p>`}
+    </div>
+    <div class="panel card"><h3>Da dove arrivano i punti</h3>
+      <div class="stack" role="img" aria-label="Liberi ${pc(mix.ft)}%, da 2 ${pc(mix.p2)}%, da 3 ${pc(mix.p3)}%">
+        <div style="width:${pc(mix.ft)}%;background:var(--bar1)">${pc(mix.ft) >= 8 ? pc(mix.ft) + "%" : ""}</div>
+        <div style="width:${pc(mix.p2)}%;background:var(--bar2)">${pc(mix.p2) >= 8 ? pc(mix.p2) + "%" : ""}</div>
+        <div style="width:${pc(mix.p3)}%;background:var(--bar3)">${pc(mix.p3) >= 8 ? pc(mix.p3) + "%" : ""}</div>
+      </div>
+      <div class="legend"><span><i style="background:var(--bar1)"></i>Liberi ${mix.ft}</span><span><i style="background:var(--bar2)"></i>Da 2 ${mix.p2}</span><span><i style="background:var(--bar3)"></i>Da 3 ${mix.p3}</span></div>
+      <p class="note">Calcolato sui soli tabellini inseriti.</p>
+      <h3>Partite</h3>
+      <table class="mini"><tbody>${t.games.map(m => { const home = m.home === t.team, us = home ? m.hs : m.as, th = home ? m.as : m.hs; return `<tr class="click" data-id="${m.id}"><td class="l muted">${esc((m.date || "").replace(/\s*\(.*\)/, ""))}</td><td class="l" style="white-space:normal">${home ? "vs" : "@"} ${esc(home ? m.away : m.home)}</td><td class="${us > th ? "res-w" : "res-l"}">${us > th ? "V" : "S"} ${us}-${th}</td></tr>`; }).join("") || `<tr><td class="muted l">Nessuna partita giocata.</td></tr>`}</tbody></table>
+    </div>
+  </div>
+  <div class="panel tblbox"><table>
+    <thead><tr><th>#</th><th class="l">Giocatore</th><th>PG</th><th>Pti</th><th>Media</th><th>Max</th><th>TL</th><th>2P</th><th>3P</th></tr></thead>
+    <tbody>${ps.map(p => `<tr><td class="muted">${p.num ?? ""}</td><td class="l" style="font-weight:600">${esc(p.name)}${p.cap ? ` <span class="chip gray">C</span>` : ""}</td><td>${p.gp}</td><td>${p.pts}</td><td class="big">${f1(p.pts / p.gp)}</td><td>${p.high}</td><td>${p.ft}</td><td>${p.p2}</td><td>${p.p3}</td></tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+// ---- CONFRONTO
+function cTeams() { return state.cAll ? C().gironi.flatMap(g => g.teams.map(t => ({ ...t, gshort: g.short }))) : G().teams.map(t => ({ ...t, gshort: G().short })); }
+function viewConfronto() {
+  const T = cTeams();
+  const M = METRICS.find(m => m[0] === state.cm) || METRICS[3];
+  const [k, label, hib, fmt, help] = M;
+  const vals = T.map(t => ({ t, v: teamMetric(t, k) })).filter(r => r.v != null);
+  vals.sort((a, b) => hib === false ? a.v - b.v : b.v - a.v);
+  const avg = vals.length ? vals.reduce((s, r) => s + r.v, 0) / vals.length : 0;
+  const maxAbs = Math.max(1e-9, ...vals.map(r => Math.abs(r.v)));
+  const signed = fmt === "s";
+  const bars = vals.map((r, i) => {
+    const w = Math.abs(r.v) / maxAbs * (signed ? 50 : 100);
+    const col = signed ? (r.v >= 0 ? "var(--win)" : "var(--loss)") : i === 0 && hib !== null ? "var(--accent)" : "var(--bar2)";
+    const bar = signed
+      ? `<div class="cb-track signed"><div class="cb-bar" style="width:${w}%;background:${col};${r.v >= 0 ? "left:50%" : `right:50%`}"></div></div>`
+      : `<div class="cb-track"><div class="cb-bar" style="width:${w}%;background:${col}"></div></div>`;
+    return `<div class="cb-row"><span class="cb-pos">${i + 1}</span><span class="cb-name">${teamCell(r.t.team)}${state.cAll ? ` <span class="muted" style="font-size:.75rem">${esc(r.t.gshort)}</span>` : ""}</span>${bar}<span class="cb-val">${fmtMetric(r.v, fmt)}</span></div>`;
+  }).join("");
+
+  // testa a testa
+  const names = T.map(t => t.team);
+  if (!names.includes(state.ha)) state.ha = T[0]?.team;
+  if (!names.includes(state.hb) || state.hb === state.ha) state.hb = T.find(t => t.team !== state.ha)?.team;
+  const A = T.find(t => t.team === state.ha), B = T.find(t => t.team === state.hb);
+  const opt = sel => T.map(t => `<option ${t.team === sel ? "selected" : ""}>${esc(t.team)}</option>`).join("");
+  const h2h = A && B ? METRICS.map(([mk, ml, mh, mf]) => {
+    const a = teamMetric(A, mk), b = teamMetric(B, mk);
+    const all = T.map(t => teamMetric(t, mk)).filter(v => v != null);
+    const lo = Math.min(0, ...all), hi = Math.max(...all.map(Math.abs), 1e-9);
+    const wa = a == null ? 0 : Math.abs(a) / hi * 100, wb = b == null ? 0 : Math.abs(b) / hi * 100;
+    const better = (a == null || b == null || mh === null || a === b) ? 0 : ((a > b) === mh ? -1 : 1);
+    return `<div class="h-row"><span class="h-v ${better === -1 ? "best" : ""}">${fmtMetric(a, mf)}</span>
+      <div class="h-track l"><div style="width:${wa}%;background:${a != null && a < 0 ? "var(--loss)" : "var(--accent)"}"></div></div>
+      <span class="h-lab">${ml}</span>
+      <div class="h-track"><div style="width:${wb}%;background:${b != null && b < 0 ? "var(--loss)" : "var(--bar2)"}"></div></div>
+      <span class="h-v r ${better === 1 ? "best" : ""}">${fmtMetric(b, mf)}</span></div>`;
+  }).join("") : "";
+
+  // tabella completa con evidenza migliore/peggiore
+  const cols = METRICS;
+  const sk = state.csort || "pfg", sdir = state.cdir || -1;
+  const rows = [...T].sort((a, b) => ((teamMetric(a, sk) ?? -1e9) - (teamMetric(b, sk) ?? -1e9)) * sdir);
+  const ext = Object.fromEntries(cols.map(([ck]) => { const v = T.map(t => teamMetric(t, ck)).filter(v => v != null); return [ck, [Math.min(...v), Math.max(...v)]]; }));
+  const cell = (t, [ck, , ch, cf]) => {
+    const v = teamMetric(t, ck); let cls = "";
+    if (v != null && ch !== null && T.length > 2) { const [mn, mx] = ext[ck]; if (mn !== mx) { if (v === (ch ? mx : mn)) cls = "c-best"; else if (v === (ch ? mn : mx)) cls = "c-worst"; } }
+    return `<td class="${cls}">${fmtMetric(v, cf)}</td>`;
+  };
+
+  return `<div class="controls">
+    <select id="cm" aria-label="Statistica">${METRICS.map(([mk, ml]) => `<option value="${mk}" ${mk === k ? "selected" : ""}>${ml}</option>`).join("")}</select>
+    <label class="chk"><input type="checkbox" id="call" ${state.cAll ? "checked" : ""}> Entrambi i gironi</label>
+  </div>
+  <div class="panel card">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3>${label}</h3><span class="muted" style="font-size:.82rem">Media ${fmtMetric(avg, fmt)}${hib === null ? " · profilo di gioco, né meglio né peggio" : hib ? " · più alto è meglio" : " · più basso è meglio"}</span></div>
+    <p class="note" style="margin:0">${help}</p>
+    <div class="cb">${bars || `<p class="muted">Dati non disponibili.</p>`}</div>
+  </div>
+
+  <div class="panel card">
+    <h3>Testa a testa</h3>
+    <div class="controls"><select id="ha" aria-label="Prima squadra">${opt(state.ha)}</select><span class="muted">vs</span><select id="hb" aria-label="Seconda squadra">${opt(state.hb)}</select></div>
+    <div class="h2h">${h2h}</div>
+    <p class="note" style="margin:0">In grassetto il valore migliore. Le barre sono in scala sul massimo del girone, così vedi anche dove si collocano rispetto alle altre.</p>
+  </div>
+
+  <div class="panel tblbox"><table>
+    <thead><tr><th class="l">Squadra</th>${cols.map(([ck, cl]) => `<th class="sort ${sk === ck ? "on" : ""}" data-ck="${ck}" title="${esc(cl)}">${esc(cl)}${sk === ck ? (sdir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(t => `<tr><td class="l team">${teamCell(t.team)}</td>${cols.map(c => cell(t, c)).join("")}</tr>`).join("")}</tbody>
+  </table></div>
+  <p class="note">Verde = migliore del gruppo, rosso = peggiore (solo per le statistiche dove "meglio" ha senso). Tiri e marcatori sono calcolati sulle partite con tabellino di entrambe le squadre, i quarti sulle partite con i parziali. Con 4-5 partite a testa i numeri sono indicativi: una gara storta pesa molto.</p>`;
+}
+
+// ---- render + routing
+function render() {
+  const t = state.tab;
+  document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.dataset.t === t));
+  const v = $("#view");
+  v.innerHTML = t === "risultati" ? viewRisultati() : t === "giocatori" ? viewGiocatori() : t === "squadre" ? viewSquadre() : t === "confronto" ? viewConfronto() : viewClassifica();
+  v.innerHTML += `<footer>Dati da <a href="${esc(DATA.source)}" target="_blank" rel="noopener">gestionalepallacanestro.uisp.it</a> · aggiornati il ${esc(DATA.generated)}</footer>`;
+  wireTeamLinks(v);
+  v.querySelectorAll("#rounds button").forEach(b => b.onclick = () => { state.round = b.dataset.k; render(); });
+  v.querySelectorAll(".game[data-id], tr.click[data-id]").forEach(b => b.onclick = () => openGame(+b.dataset.id));
+  v.querySelectorAll("th.sort").forEach(th => th.onclick = () => { const k = th.dataset.k; if (state.sort === k) state.dir *= -1; else { state.sort = k; state.dir = (k === "name" || k === "team") ? 1 : -1; } render(); });
+  const on = (id, ev, fn) => { const el = v.querySelector(id); if (el) el.addEventListener(ev, fn); };
+  on("#pq", "input", e => { state.q = e.target.value; const pos = e.target.selectionStart; render(); const n = $("#pq"); n.focus(); n.setSelectionRange(pos, pos); });
+  on("#pteam", "change", e => { state.team = e.target.value; render(); });
+  on("#pmin", "change", e => { state.min = +e.target.value; render(); });
+  on("#pall", "change", e => { state.all = e.target.checked; render(); });
+  on("#sq", "change", e => { state.sqTeam = e.target.value; render(); });
+  on("#cm", "change", e => { state.cm = e.target.value; render(); });
+  on("#call", "change", e => { state.cAll = e.target.checked; render(); });
+  on("#ha", "change", e => { state.ha = e.target.value; if (state.hb === state.ha) state.hb = null; render(); });
+  on("#hb", "change", e => { state.hb = e.target.value; render(); });
+  v.querySelectorAll("th.sort[data-ck]").forEach(th => th.onclick = () => { const k = th.dataset.ck; if (state.csort === k) state.cdir *= -1; else { state.csort = k; state.cdir = -1; } render(); });
+}
+function route() { const h = location.hash.slice(1); state.tab = ["classifica", "risultati", "giocatori", "squadre", "confronto"].includes(h) ? h : "classifica"; render(); }
+// ---- AGGIORNA: rilegge il girone visualizzato dal sito UISP con il browser integrato dell'app Claude desktop,
+// poi ripubblica l'app con i dati nuovi (la pagina si ricarica da sola alla nuova versione)
+const BR = "host:claude_browser";
+const SKEL = '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>';
+const MK_DATA = "/*__DA" + "TA__*/null", MK_TPL = "/*__TP" + "L__*/\"\"";
+const UPD = { mcp: null, art: null, busy: false };
+const nowStamp = () => { const d = new Date(), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+function updMsg(t, err) { const el = $("#updmsg"); el.textContent = t || ""; el.classList.toggle("err", !!err); }
+// il browser dell'app limita le chiamate ravvicinate: tengo un intervallo minimo e, se arriva
+// rate_limited, aspetto e riprovo (attese crescenti) mostrando il conto alla rovescia
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function br(tool, input) {
+  const waits = [5000, 10000, 20000, 30000, 45000];
+  for (let k = 0; ; k++) {
+    const gap = 900 - (Date.now() - (UPD.last || 0)); if (gap > 0) await sleep(gap);
+    try {
+      const r = await UPD.mcp.callTool(BR, tool, input, { cache: false });
+      UPD.last = Date.now();
+      return (r.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+    } catch (e) {
+      UPD.last = Date.now();
+      if (e?.code !== "rate_limited" || k >= waits.length) throw e;
+      const ms = Math.max(e.retryAfterMs || 0, waits[k]), msg = $("#updmsg").textContent.replace(/ \(pausa.*\)$/, "");
+      for (let s = Math.ceil(ms / 1000); s > 0; s--) { updMsg(`${msg} (pausa richiesta dal browser di Claude, riprendo tra ${s} s)`); await sleep(1000); }
+      updMsg(msg);
+    }
+  }
+}
+async function brOpen(path) { await br("navigate", { url: "https://gestionalepallacanestro.uisp.it" + path }); }
+const isNum = s => /^\d+$/.test(s);
+const upper = s => String(s).toUpperCase();
+
+// pagina giornata: schede partita (read_page dà link e nomi, get_page_text dà i punteggi) + classifica
+function parseRound(tree, text, base) {
+  const lines = tree.split("\n"), cards = [];
+  const rxLink = new RegExp('^link \\[ref_\\d+\\] href="' + base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + '/(\\d+)/(\\d+)/(\\d+)"');
+  for (let i = 0; i < lines.length; i++) {
+    const m = rxLink.exec(lines[i]); if (!m) continue;
+    const vals = [];
+    for (let j = i + 1; j < lines.length && /^\s/.test(lines[j]); j++) { const g = /generic "(.*)" \[ref_/.exec(lines[j]); if (g) vals.push(g[1]); }
+    if (vals.length >= 2) cards.push({ round: +m[1], num: +m[2], id: +m[3], home: vals[0], away: vals[1], date: vals[2] || "", time: vals[3] || "", venue: vals[4] || "" });
+  }
+  // punteggi: dopo il nome della squadra di casa (maiuscolo) ci sono le due cifre, se la partita è giocata
+  const tl = text.split("\n").map(s => s.trim()); let pos = 0;
+  for (const c of cards) {
+    const k = tl.indexOf(upper(c.home), pos); if (k < 0) { c.hs = c.as = null; continue; }
+    pos = k + 1; const nx = tl.slice(k + 1, k + 6).filter(Boolean);
+    if (isNum(nx[0]) && isNum(nx[1])) { c.hs = +nx[0]; c.as = +nx[1]; } else c.hs = c.as = null;
+  }
+  // classifica: nomi da read_page (tabella), punti da get_page_text (riga "squadra  Pt  PF  PS")
+  const names = []; const ti = lines.findIndex(l => /^table /.test(l));
+  if (ti >= 0) { const gl = []; for (let j = ti + 1; j < lines.length && /^\s/.test(lines[j]); j++) { const g = /generic "(.*)" \[ref_/.exec(lines[j]); if (g) gl.push(g[1]); }
+    const s = gl.indexOf("Punti subiti"); for (let j = s + 1; j + 2 < gl.length + 1; j += 3) if (gl[j] != null && !isNum(gl[j])) names.push(gl[j]); }
+  const hi = tl.findIndex(l => /^Classifica\s+Pt\s+PF\s+PS$/.test(l)); const rows = [];
+  if (hi >= 0) for (const l of tl.slice(hi + 1)) { if (!l) continue; const p = l.split(/\t+/).map(s => s.trim()).filter(Boolean); if (p.length !== 4 || !isNum(p[1])) break; rows.push(p); }
+  const standings = rows.length && rows.length === names.length ? rows.map((p, i) => ({ team: names[i], pt: +p[1], pf: +p[2], ps: +p[3] })) : null;
+  const rounds = [...new Set([...tree.matchAll(/round=(\d)&(?:amp;)?roundnumber=(\d+)/g)].map(m => m[1] + "-" + m[2]))];
+  return { cards, standings, rounds };
+}
+// pagina partita: parziali (cumulativi), tabellini, allenatori
+function parseMatch(text) {
+  const tl = text.split("\n").map(s => s.replace(/\s+$/, "")); let q = null;
+  const pi = tl.findIndex(l => l.trim() === "Parziali");
+  if (pi >= 0) { const rows = tl.slice(pi + 2, pi + 4).map(l => l.split("\t").slice(1).map(s => isNum(s.trim()) ? +s.trim() : null));
+    if (rows.length === 2 && rows[0].length && rows[1].length) q = rows; }
+  const boxes = [], coaches = [];
+  tl.forEach((l, i) => { if (l.trim() !== "Convocati e tabellino") return;
+    const players = []; let j = i + 1; if (/^#\t/.test(tl[j])) j++;
+    for (; j < tl.length; j++) { const m = /^(\d*)\t(.+?)\t(\d+)\t(\d+)\t(\d+)\t(\d+)$/.exec(tl[j]); if (!m) break;
+      let name = m[2].trim(), c = ""; const cm = / (C|V)$/.exec(name); if (cm) { c = cm[1]; name = name.slice(0, -2).trim(); }
+      players.push({ n: m[1] === "" ? null : +m[1], name, c, ft: +m[3], p2: +m[4], p3: +m[5], pts: +m[6] }); }
+    let coach = "";
+    for (; j < tl.length - 1; j++) { if (tl[j].trim() === "Convocati e tabellino" || tl[j].startsWith("©")) break; if (tl[j + 1].trim() === "A") { coach = tl[j].trim(); break; } }
+    boxes.push(players); coaches.push(coach); });
+  return { q, box: boxes.length >= 2 ? { home: boxes[0], away: boxes[1] } : null, coach: boxes.length >= 2 ? { home: coaches[0], away: coaches[1] } : null };
+}
+function buildHtml() {
+  const json = JSON.stringify(RAW).replace(/<\//g, "<\\/").replace(/<!--/g, "<\\u0021--");
+  const tpl = JSON.stringify(TPL).replace(/<\//g, "<\\/").replace(/<!--/g, "<\\u0021--");
+  return SKEL + "\n" + TPL.replace(MK_DATA, () => json).replace(MK_TPL, () => tpl) + "\n</body></html>";
+}
+async function aggiorna() {
+  if (UPD.busy) return;
+  if (UPD.ready) { updMsg("Preparo l'aggiornamento…"); await UPD.ready; }
+  if (!UPD.mcp) return updMsg("Questa vista non può usare il browser di Claude: apri l'app dall'app Claude desktop (non dal browser web).", true);
+  if (!UPD.art) return updMsg("Questa vista non può salvare una nuova versione dell'app.", true);
+  UPD.busy = true; $("#upd").disabled = true;
+  const rg = RAW.campionati[state.c].gironi[state.g], label = `${titleCase(C().nome)} · ${G().short}`;
+  const base = `/${RAW.comitato}/${RAW.campionati[state.c].id}/${rg.id}`;
+  try {
+    updMsg(`${label}: leggo il calendario…`);
+    await brOpen(`${base}?round=1&roundnumber=1`);
+    const first = parseRound(await br("read_page", { filter: "all", max_chars: 200000 }), await br("get_page_text", { max_chars: 200000 }), base);
+    if (!first.cards.length) throw { code: "parse", message: "non trovo le partite nella pagina del sito" };
+    const known = new Map(rg.matches.map(m => [m.id, m]));
+    // giornate da rileggere: la prima (classifica), quelle nuove, e quelle con partite già in calendario
+    // (data passata o sconosciuta) ma ancora senza risultato o senza tabellino; le giornate future si saltano
+    // (un tabellino mancante si ricerca solo per le partite delle ultime 3 settimane: dopo, non arriva più)
+    const due = m => { const ts = parseDate(m.date, m.time); return !ts || ts < Date.now(); };
+    const recent = m => { const ts = parseDate(m.date, m.time); return !ts || ts > Date.now() - 21 * 864e5; };
+    const stale = m => (m.hs == null && due(m)) || (m.hs != null && !m.box && recent(m));
+    const todo = first.rounds.filter(k => k === "1-1" || !rg.matches.some(m => m.round + "-" + m.num === k) ||
+      rg.matches.some(m => m.round + "-" + m.num === k && stale(m)));
+    const cards = [...first.cards];
+    let n = 0;
+    for (const k of todo) {
+      if (k === "1-1") continue; n++;
+      updMsg(`${label}: giornata ${n}/${todo.length - (todo.includes("1-1") ? 1 : 0)}…`);
+      const [r, nn] = k.split("-");
+      await brOpen(`${base}?round=${r}&roundnumber=${nn}`);
+      const pr = parseRound(await br("read_page", { filter: "all", max_chars: 200000 }), await br("get_page_text", { max_chars: 200000 }), base);
+      cards.push(...pr.cards);
+    }
+    // partite giocate da completare con parziali e tabellini
+    const need = cards.filter(c => { const k = known.get(c.id); if (c.hs == null) return false;
+      return !k || k.hs !== c.hs || k.as !== c.as || (!k.box && recent(k)); });
+    const seen = new Set(); let added = 0, changed = 0, i = 0;
+    for (const c of cards) {
+      if (seen.has(c.id)) continue; seen.add(c.id);
+      let m = known.get(c.id);
+      const wasPlayed = m && m.hs != null, hadBox = !!m?.box;
+      if (!m) { m = { id: c.id, round: c.round, num: c.num, home: c.home, away: c.away, hs: null, as: null, date: c.date, time: c.time, venue: c.venue, q: null, box: null, coach: null }; rg.matches.push(m); known.set(c.id, m); added++; }
+      Object.assign(m, { round: c.round, num: c.num, home: c.home, away: c.away, date: c.date || m.date, time: c.time || m.time, venue: c.venue || m.venue });
+      if (c.hs != null && (m.hs !== c.hs || m.as !== c.as)) { m.hs = c.hs; m.as = c.as; changed++; }
+      if (need.includes(c)) {
+        i++; updMsg(`${label}: tabellino ${i}/${need.length} (${c.home} - ${c.away})…`);
+        await brOpen(`${base}/${c.round}/${c.num}/${c.id}`);
+        const pm = parseMatch(await br("get_page_text", { max_chars: 200000 }));
+        if (pm.q) m.q = pm.q;
+        if (pm.box) { m.box = pm.box; m.coach = pm.coach; if (!hadBox && wasPlayed) changed++; }
+      }
+    }
+    // classifica: punti, PF e PS dal sito; vinte/perse contate dai risultati
+    if (first.standings && rg.standings?.length) {
+      const prev = JSON.stringify(rg.standings);
+      rg.standings = first.standings.map(s => { let v = 0, l = 0;
+        for (const m of rg.matches) { if (m.hs == null || (m.home !== s.team && m.away !== s.team)) continue; const us = m.home === s.team ? m.hs : m.as, th = m.home === s.team ? m.as : m.hs; if (us > th) v++; else if (us < th) l++; }
+        return { team: s.team, pt: s.pt, v, s: l, pf: s.pf, ps: s.ps }; });
+      if (JSON.stringify(rg.standings) !== prev) changed++;
+    }
+    if (!added && !changed) { updMsg(`${label}: già aggiornato, nessuna novità sul sito.`); return; }
+    rg.updated = nowStamp();
+    updMsg(`${label}: ${changed} aggiornamenti${added ? `, ${added} partite nuove` : ""}. Salvo la nuova versione…`);
+    await UPD.art.publish(buildHtml());
+    updMsg("Salvato: l'app si ricarica con i dati nuovi.");
+  } catch (e) {
+    const c = e?.code;
+    const msg = c === "server_not_connected" ? "Per aggiornare apri l'app dentro Claude desktop (serve il suo browser integrato)."
+      : c === "cancelled" || c === "not_in_manifest" || c === "approval_required" ? "Aggiornamento annullato: serve il permesso di usare il browser dell'app Claude."
+      : c === "conflict" ? "Nel frattempo è stata salvata un'altra versione: l'app si ricarica, poi riprova."
+      : c === "not_writer" || c === "not_granted" ? "Puoi leggere l'app ma non salvarla: l'aggiornamento lo può fare solo chi la modifica."
+      : c === "too_large" ? "La nuova versione supera la dimensione massima consentita."
+      : c === "parse" ? `Il sito ha risposto in un formato inatteso (${e.message}). Nessun dato modificato.`
+      : `Aggiornamento non riuscito (${c || "errore"}${e?.message ? ": " + e.message : ""}). Nessun dato modificato.`;
+    updMsg(msg, true);
+  } finally { UPD.busy = false; $("#upd").disabled = false; }
+}
+$("#upd").addEventListener("click", aggiorna);
+// il pulsante compare solo dove la pagina può usare il browser dell'app e salvarsi
+// il pulsante è sempre visibile su claude.ai; se questa vista non può usarlo, al clic spiega perché
+if (window.claude?.use) {
+  $("#upd").hidden = false;
+  UPD.ready = Promise.all([claude.use("mcp"), claude.use("artifact")]).then(([mcp, art]) => { UPD.mcp = mcp; UPD.art = art; }).catch(() => {});
+}
+
+renderSeg();
+window.addEventListener("hashchange", route);
+route();
+</script>

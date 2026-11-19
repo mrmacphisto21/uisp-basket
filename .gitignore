@@ -1,0 +1,7 @@
+# dati scaricati e pagina generata: si rigenerano a ogni giro e contengono nomi di giocatori (anche minorenni)
+data.json
+data_*.json
+Varese_Basket.html
+*.log
+prev/
+*.tmp

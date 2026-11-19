@@ -1,0 +1,108 @@
+name: Basket UISP Varese - aggiornamento
+
+on:
+  schedule:
+    # Ora UTC: 06:00 UTC = 07:00 in Italia d'inverno, 08:00 d'estate. Lunedì e giovedì.
+    # Gli orari pianificati possono slittare di qualche minuto nelle ore di punta.
+    - cron: "0 6 * * 1,4"
+  workflow_dispatch:
+    inputs:
+      invia_sempre:
+        description: "Manda la pagina su Telegram anche se non ci sono novità"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aggiorna
+  cancel-in-progress: false
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # dati del giro precedente, per capire se ci sono novità (non finiscono nel repo)
+      - name: Recupera i dati precedenti
+        uses: actions/cache/restore@v4
+        with:
+          path: prev
+          key: dati-${{ github.run_id }}
+          restore-keys: dati-
+
+      - name: Scarica i dati e genera la pagina
+        shell: pwsh
+        run: ./scrape.ps1
+
+      - name: Confronta con il giro precedente
+        id: novita
+        shell: pwsh
+        run: |
+          function Conta($path) {
+            $r = @{}
+            if (-not (Test-Path $path)) { return $r }
+            $d = Get-Content -Raw $path | ConvertFrom-Json
+            foreach ($c in $d.campionati) {
+              $m = @($c.gironi | ForEach-Object { $_.matches })
+              $r[$c.nome] = [pscustomobject]@{ g = @($m | Where-Object { $null -ne $_.hs }).Count; b = @($m | Where-Object { $_.box }).Count }
+            }
+            $r
+          }
+          $old = Conta 'prev/data.json'; $new = Conta 'data.json'
+          $righe = foreach ($k in $new.Keys | Sort-Object) {
+            $o = $old[$k]; $n = $new[$k]
+            $dg = $n.g - ($o ? $o.g : 0); $db = $n.b - ($o ? $o.b : 0)
+            if ($old.Count -and ($dg -gt 0 -or $db -gt 0)) { "• ${k}: +$dg risultati, +$db tabellini" }
+          }
+          $primo = -not $old.Count
+          $testo = if ($primo) { "Prima pubblicazione." } elseif ($righe) { ($righe -join "`n") } else { "Nessuna novità dal giro precedente." }
+          "cambiato=$(($primo -or [bool]$righe).ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          "testo<<FINE`n$testo`nFINE" >> $env:GITHUB_OUTPUT
+          New-Item -ItemType Directory -Force prev | Out-Null
+          Copy-Item data.json prev/data.json -Force
+
+      - name: Salva i dati per il prossimo giro
+        uses: actions/cache/save@v4
+        with:
+          path: prev
+          key: dati-${{ github.run_id }}
+
+      - name: Manda la pagina su Telegram
+        if: steps.novita.outputs.cambiato == 'true' || (github.event_name == 'workflow_dispatch' && inputs.invia_sempre)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TESTO: ${{ steps.novita.outputs.testo }}
+        run: |
+          set -e
+          quando=$(TZ=Europe/Rome date +"%d/%m/%Y %H:%M")
+          resp=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+            --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
+            --form-string "caption=🏀 Basket UISP Varese — dati al ${quando}
+          ${TESTO}" \
+            -F "document=@Varese_Basket.html;type=text/html")
+          echo "$resp" | grep -q '"ok":true' || { echo "Telegram ha risposto: $resp"; exit 1; }
+
+      - name: Conserva la pagina (30 giorni)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pagina
+          path: Varese_Basket.html
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Avviso di errore su Telegram
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -o /dev/null -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=❌ Basket UISP: aggiornamento fallito. Dettagli: ${LINK}"
