@@ -34,9 +34,15 @@ jobs:
           key: dati-${{ github.run_id }}
           restore-keys: dati-
 
+      # campionati da scaricare: variabile del repo CAMPIONATI con gli id separati da virgola
+      # (Settings → Secrets and variables → Actions → Variables). Vuota o assente = tutti.
       - name: Scarica i dati e genera la pagina
         shell: pwsh
-        run: ./scrape.ps1
+        env:
+          CAMPIONATI: ${{ vars.CAMPIONATI }}
+        run: |
+          $ids = @("$env:CAMPIONATI" -split '[,; ]+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+          if ($ids.Count) { Write-Host "Campionati scelti: $($ids -join ', ')"; ./scrape.ps1 -Camp $ids } else { ./scrape.ps1 }
 
       - name: Confronta con il giro precedente
         id: novita
