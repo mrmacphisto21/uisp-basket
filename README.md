@@ -11,6 +11,15 @@ su Telegram come file, con l'elenco delle novità nella didascalia. Se qualcosa 
 "❌ aggiornamento fallito". Si può lanciare a mano da **Actions → Basket UISP Varese → Run workflow**
 (anche dal telefono, app GitHub o browser).
 
+**Incrementale:** ogni giro riparte dai dati del giro precedente. Le giornate con tutte le partite dopo la fine
+del mese corrente non vengono scaricate; per le partite già giocate si riscarica il tabellino solo se il punteggio
+sul sito è cambiato o se il tabellino mancava (partite degli ultimi 60 giorni). Le pagine delle giornate del mese
+si rileggono sempre, così risultati corretti o spostamenti di data vengono presi. Per riscaricare tutto da zero:
+Run workflow con "Riscarica tutto da zero".
+
+I campionati da scaricare si scelgono con la variabile del repo `CAMPIONATI` (id separati da virgola, es.
+`1,6,9,10,12`; vuota = tutti): Settings → Secrets and variables → Actions → Variables.
+
 I dati non vengono salvati nel repository: restano solo nella cache del workflow (per riconoscere le novità)
 e nella pagina allegata in Actions per 30 giorni.
 
@@ -24,7 +33,8 @@ e nella pagina allegata in Actions per 30 giorni.
 
 ## In locale (Windows, PowerShell 7)
 ```
-pwsh ./scrape.ps1                 # tutti i campionati (~9 minuti)
+pwsh ./scrape.ps1                 # tutti i campionati, incrementale rispetto a data.json
+pwsh ./scrape.ps1 -Full           # riscarica tutto da zero (~9 minuti)
 pwsh ./scrape.ps1 -Camp 9,17      # solo alcuni campionati, per id
 pwsh ./scrape.ps1 -BuildOnly      # rigenera la pagina da data.json senza scaricare
 ```

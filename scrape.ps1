@@ -6,15 +6,40 @@
 param(
     [string]$Base = "https://gestionalepallacanestro.uisp.it",
     [string]$Comitato = "Varese",
-    [int[]]$Camp = @(),
+    [string[]]$Camp = @(),   # id dei campionati, es. 9,17 (funziona anche come stringa "9,17" con pwsh -File)
     [int]$DelayMs = 200,
     [string]$OutName = "Varese_Basket.html",
-    [switch]$BuildOnly
+    [switch]$BuildOnly,
+    # dati del giro precedente: le partite già complete si riusano, le giornate future non si scaricano
+    [string]$Prev = (Join-Path $PSScriptRoot "data.json"),
+    # ignora i dati precedenti e riscarica tutto
+    [switch]$Full
 )
 $ErrorActionPreference = 'Stop'
 
+# ---- modalità incrementale
+$MonthsIt = @{ gennaio=1; febbraio=2; marzo=3; aprile=4; maggio=5; giugno=6; luglio=7; agosto=8; settembre=9; ottobre=10; novembre=11; dicembre=12 }
+function DateOf($m) {
+    $x = [regex]::Match("$($m.date)", '(\d+)\s+(\p{L}+)\s+(\d{4})')
+    if (-not $x.Success -or -not $MonthsIt.ContainsKey($x.Groups[2].Value.ToLower())) { return $null }
+    [datetime]::new([int]$x.Groups[3].Value, $MonthsIt[$x.Groups[2].Value.ToLower()], [int]$x.Groups[1].Value)
+}
+$Today = (Get-Date).Date
+$MonthEnd = [datetime]::new($Today.Year, $Today.Month, 1).AddMonths(1)   # primo giorno del mese prossimo
+$BoxWindow = $Today.AddDays(-60)   # un tabellino mancante si ricerca solo per le partite degli ultimi 60 giorni
+$PrevById = @{}; $PrevGirone = @{}
+if (-not $Full -and -not $BuildOnly -and $Prev -and (Test-Path $Prev)) {
+    $pd = Get-Content -Raw $Prev -Encoding utf8 | ConvertFrom-Json
+    foreach ($c in $pd.campionati) { foreach ($pg in $c.gironi) {
+        $PrevGirone[[int]$pg.id] = $pg
+        foreach ($m in $pg.matches) { $PrevById[[int]$m.id] = $m } } }
+    Write-Host "Dati precedenti: $($PrevById.Count) partite da $Prev (giornate oltre il $($MonthEnd.AddDays(-1).ToString('dd/MM/yyyy')) non scaricate)"
+}
+$Stats = @{ pagine = 0; giornateSaltate = 0; partiteRiusate = 0 }
+
 function Get-Html([string]$path) {
     Start-Sleep -Milliseconds $DelayMs
+    $Stats.pagine++
     for ($i = 1; $i -le 3; $i++) {
         try { return (Invoke-WebRequest -Uri "$Base$path" -UseBasicParsing -TimeoutSec 30).Content }
         catch { if ($i -eq 3) { throw }; Start-Sleep -Seconds 2 }
@@ -65,8 +90,16 @@ foreach ($g in $gironi) {
         }
     }
 
+    $pg = $PrevGirone[$g.id]
+    if ($pg -and -not $g.name) { $g.name = $pg.name }
     foreach ($rk in $rounds) {
         $r, $n = $rk.Split('-')
+        # giornata con tutte le partite (secondo i dati precedenti) dopo la fine del mese: la tengo com'era
+        $pm = if ($pg) { @($pg.matches | Where-Object { "$($_.round)-$($_.num)" -eq $rk }) } else { @() }
+        if ($rk -ne '1-1' -and $pm.Count -and -not @($pm | Where-Object { $null -ne $_.hs -or -not (DateOf $_) -or (DateOf $_) -lt $MonthEnd }).Count) {
+            foreach ($m in $pm) { if ($g.matches.id -notcontains $m.id) { $g.matches += $m } }
+            $Stats.giornateSaltate++; continue
+        }
         $html = if ($rk -eq '1-1') { $first } else { Get-Html "$gPath`?round=$r&roundnumber=$n" }
         foreach ($c in [regex]::Matches($html, $rxCard)) {
             if ([int]$c.Groups[1].Value -ne $g.id) { continue }
@@ -83,7 +116,12 @@ foreach ($g in $gironi) {
                 venue = Strip ([regex]::Match($body, $rxVenue).Groups[1].Value)
                 q = $null; box = $null; coach = $null
             }
-            if ($null -ne $match.hs -and $null -ne $match.as) {
+            # partita già completa nel giro precedente e con lo stesso punteggio: riuso parziali e tabellini
+            $old = $PrevById[$id]
+            $reuse = $old -and $null -ne $match.hs -and $old.hs -eq $match.hs -and $old.as -eq $match.as -and
+                     ($old.box -or ((DateOf $old) -and (DateOf $old) -lt $BoxWindow))
+            if ($reuse) { $match.q = $old.q; $match.box = $old.box; $match.coach = $old.coach; $Stats.partiteRiusate++ }
+            elseif ($null -ne $match.hs -and $null -ne $match.as) {
                 $mh = Get-Html "$gPath/$($c.Groups[2].Value)/$($c.Groups[3].Value)/$id"
                 if (-not $g.name) {
                     $g.name = Strip ([regex]::Match($mh, "(?s)href=""$([regex]::Escape($gPath))\?round=[^""]*""[^>]*>(.*?)</a>").Groups[1].Value)
@@ -127,7 +165,7 @@ foreach ($g in $gironi) {
     if (-not $g.name) { $g.name = $g.label }
     $played = @($g.matches | Where-Object { $null -ne $_.hs })
     $withBox = @($played | Where-Object { $_.box })
-    $sumPts = { param($rows) $t = 0; foreach ($r in $rows) { $t += $r['pts'] }; $t }
+    $sumPts = { param($rows) $t = 0; foreach ($r in $rows) { $t += $r.pts }; $t }
     $bad = @($withBox | Where-Object { ((& $sumPts $_.box.home) -ne $_.hs) -or ((& $sumPts $_.box.away) -ne $_.as) })
     Write-Host ("  partite: {0}, giocate: {1}, con tabellino: {2}, con parziali: {3}" -f $g.matches.Count, $played.Count, $withBox.Count, @($played | Where-Object { $_.q }).Count)
     foreach ($b in $bad) { Write-Warning "  partita $($b.id): somma tabellino diversa dal punteggio" }
@@ -151,7 +189,8 @@ if ($BuildOnly) { Build-App (Get-Content -Raw -Path (Join-Path $PSScriptRoot "da
 # Elenco campionati dalla home del comitato
 $homeHtml = Get-Html "/$Comitato"
 $ids = @([regex]::Matches($homeHtml, "href=""/$Comitato/(\d+)""") | ForEach-Object { [int]$_.Groups[1].Value } | Select-Object -Unique)
-if ($Camp.Count) { $ids = @($ids | Where-Object { $Camp -contains $_ }) }
+$want = @($Camp -join ',' -split '[,; ]+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+if ($want.Count) { $ids = @($ids | Where-Object { $want -contains $_ }) }
 Write-Host "Campionati da scaricare: $($ids -join ', ')"
 
 $campionati = @()
@@ -173,3 +212,4 @@ $json | Set-Content -Path (Join-Path $PSScriptRoot "data.json") -Encoding utf8
 
 Build-App $json
 Write-Host "Campionati inclusi: $($campionati.Count)"
+Write-Host "Pagine scaricate: $($Stats.pagine), giornate future saltate: $($Stats.giornateSaltate), partite riusate dal giro precedente: $($Stats.partiteRiusate)"
