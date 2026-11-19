@@ -18,6 +18,8 @@ on:
 
 permissions:
   contents: read
+  pages: write        # pubblicazione della pagina cifrata su GitHub Pages
+  id-token: write
 
 concurrency:
   group: aggiorna
@@ -27,6 +29,9 @@ jobs:
   aggiorna:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -86,18 +91,48 @@ jobs:
           path: prev
           key: dati-${{ github.run_id }}
 
+      # pagina cifrata con la password del secret PAGINA_PASSWORD (senza secret non si pubblica nulla)
+      - name: Cifra la pagina
+        id: cifra
+        shell: pwsh
+        env:
+          PAGINA_PASSWORD: ${{ secrets.PAGINA_PASSWORD }}
+        run: |
+          if (-not $env:PAGINA_PASSWORD) { Write-Warning "Secret PAGINA_PASSWORD mancante: la pagina non viene pubblicata su Pages"; "ok=false" >> $env:GITHUB_OUTPUT; exit 0 }
+          ./cifra.ps1
+          "ok=true" >> $env:GITHUB_OUTPUT
+
+      - name: Prepara la pubblicazione
+        if: steps.cifra.outputs.ok == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        if: steps.cifra.outputs.ok == 'true'
+        continue-on-error: true      # se Pages non è attivo la pagina arriva comunque su Telegram
+        uses: actions/deploy-pages@v4
+
       - name: Manda la pagina su Telegram
         if: steps.novita.outputs.cambiato == 'true' || (github.event_name == 'workflow_dispatch' && inputs.invia_sempre)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TESTO: ${{ steps.novita.outputs.testo }}
+          PAGINA: ${{ steps.deployment.outcome == 'success' && steps.deployment.outputs.page_url || '' }}
+          PAGINA_KO: ${{ steps.cifra.outputs.ok == 'true' && steps.deployment.outcome != 'success' }}
         run: |
           set -e
           quando=$(TZ=Europe/Rome date +"%d/%m/%Y %H:%M")
+          link=""
+          [ -n "$PAGINA" ] && link="
+          👉 ${PAGINA}"
+          [ "$PAGINA_KO" = "true" ] && link="
+          ⚠️ pubblicazione del link non riuscita (Pages attivo?)"
           resp=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
             --form-string "chat_id=${TELEGRAM_CHAT_ID}" \
-            --form-string "caption=🏀 Basket UISP Varese — dati al ${quando}
+            --form-string "caption=🏀 Basket UISP Varese — dati al ${quando}${link}
           ${TESTO}" \
             -F "document=@Varese_Basket.html;type=text/html")
           echo "$resp" | grep -q '"ok":true' || { echo "Telegram ha risposto: $resp"; exit 1; }

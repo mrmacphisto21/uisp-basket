@@ -23,8 +23,20 @@ I campionati da scaricare si scelgono con la variabile del repo `CAMPIONATI` (id
 I dati non vengono salvati nel repository: restano solo nella cache del workflow (per riconoscere le novità)
 e nella pagina allegata in Actions per 30 giorni.
 
+### Pagina con password (per aprirla da telefono, anche iPhone)
+Ogni giro pubblica anche una versione **cifrata** della pagina su GitHub Pages
+(`https://mrmacphisto21.github.io/uisp-basket/`), e il link arriva nel messaggio Telegram.
+`cifra.ps1` comprime la pagina e la cifra con AES-256-GCM (chiave PBKDF2-SHA256 dalla password);
+`sblocca.template.html` è la pagina che chiede la password e la decifra nel browser (WebCrypto).
+Senza password chi apre il link vede solo il campo password. Il repository può essere pubblico:
+contiene solo codice, mai dati.
+
+Configurazione: secret `PAGINA_PASSWORD` + Settings → Pages → Source: **GitHub Actions**.
+Per cambiare password basta aggiornare il secret: vale dal giro successivo (sul telefono va reinserita).
+
 ### Configurazione (una volta)
-1. Su GitHub crea il repository **privato** `uisp-basket` (vuoto, senza README) e fai il primo push.
+1. Su GitHub crea il repository `uisp-basket` (vuoto, senza README) e fai il primo push. Pubblico se vuoi
+   il link con password su Pages (con l'account gratuito Pages funziona solo su repo pubblici).
 2. **Settings → Secrets and variables → Actions → New repository secret**:
    - `TELEGRAM_BOT_TOKEN`: lo stesso bot dei segnali ETF va benissimo.
    - `TELEGRAM_CHAT_ID`: la chat dove mandare la pagina. Per mandarla anche al coach crea un gruppo
@@ -46,4 +58,6 @@ pwsh ./scrape.ps1 -BuildOnly      # rigenera la pagina da data.json senza scaric
 
 ## Privacy
 La pagina contiene nomi e punteggi di giocatori, anche minorenni (già pubblici sul sito UISP).
-Repository privato, e la pagina va condivisa solo con chi serve.
+I dati non sono mai nel repository; la pagina pubblicata è cifrata e va condivisa (link + password)
+solo con chi serve. I log di Actions di un repo pubblico sono visibili: contengono nomi di squadre e
+conteggi, non giocatori.

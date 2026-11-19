@@ -4,4 +4,5 @@ data_*.json
 Varese_Basket.html
 *.log
 prev/
+site/
 *.tmp

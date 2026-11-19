@@ -180,7 +180,9 @@ function Build-App([string]$json) {
     # il template viene incorporato anche come stringa: serve al pulsante "Aggiorna" per ripubblicare la pagina intera
     $tplStr = (ConvertTo-Json -InputObject $tpl -Compress).Replace('</', '<\/').Replace('<!--', '<!--')
     $outFile = Join-Path $PSScriptRoot $OutName
-    $tpl.Replace('/*__DATA__*/null', $safe).Replace('/*__TPL__*/""', $tplStr) | Set-Content -Path $outFile -Encoding utf8 -NoNewline
+    # doctype e viewport: la pagina si apre anche da sola (file da Telegram, pagina sbloccata) e va in modalità standard su telefono
+    $head = '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>' + "`n"
+    $head + $tpl.Replace('/*__DATA__*/null', $safe).Replace('/*__TPL__*/""', $tplStr) + "`n</body></html>" | Set-Content -Path $outFile -Encoding utf8 -NoNewline
     Write-Host "Creato $outFile"
 }
 # -BuildOnly: rigenera solo l'HTML dal data.json esistente, senza scaricare

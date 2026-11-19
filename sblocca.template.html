@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Basket UISP">
+<meta name="theme-color" content="#1b2230">
+<title>Basket UISP Varese</title>
+<style>
+:root { --band: #1b2230; --ink: #f5f3ef; --accent: #d9530f; --muted: #9aa0a9; --err: #ffb3a8 }
+* { box-sizing: border-box }
+html, body { margin: 0; min-height: 100%; background: var(--band); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif }
+main { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px }
+form { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 14px }
+h1 { margin: 0; font: 700 2.2rem/1 "Arial Narrow", system-ui, sans-serif; text-transform: uppercase; letter-spacing: .01em }
+h1 span { color: var(--accent) }
+p { margin: 0; color: var(--muted); font-size: .9rem }
+input[type=password] { font: inherit; padding: 12px 14px; border-radius: 8px; border: 1px solid #3a4250; background: #0f141b; color: var(--ink); width: 100% }
+input[type=password]:focus { outline: 2px solid var(--accent); outline-offset: 1px }
+label { display: flex; gap: 8px; align-items: center; font-size: .9rem; color: var(--muted) }
+button { font: 600 1rem system-ui, sans-serif; padding: 12px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; cursor: pointer }
+button:disabled { opacity: .6; cursor: progress }
+#msg { min-height: 1.3em; font-size: .9rem }
+#msg.err { color: var(--err) }
+.hidden-user { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0 }
+</style>
+</head>
+<body>
+<main>
+  <form id="f" autocomplete="on">
+    <h1>Basket UISP <span>Varese</span></h1>
+    <p>Pagina privata: inserisci la password per vedere risultati, classifiche e tabellini.</p>
+    <input class="hidden-user" type="text" name="username" autocomplete="username" value="basket-uisp" tabindex="-1" aria-hidden="true">
+    <input id="pw" type="password" name="password" autocomplete="current-password" placeholder="Password" required aria-label="Password">
+    <label><input id="rem" type="checkbox" checked> Ricorda su questo dispositivo</label>
+    <button id="go" type="submit">Apri</button>
+    <div id="msg" role="status" aria-live="polite"></div>
+    <p id="when"></p>
+  </form>
+</main>
+<script>
+// tutto in una funzione: dopo document.write l'app gira nella stessa finestra e non deve trovare nomi già usati
+(() => {
+const P = /*__PAYLOAD__*/null;
+const KEY = "uisp.pw";
+const $ = id => document.getElementById(id);
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const store = { get() { try { return localStorage.getItem(KEY) } catch { return null } },
+                set(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY) } catch {} } };
+if (P && P.quando) $("when").textContent = "Dati aggiornati al " + P.quando;
+
+async function apri(pw) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(P.salt), iterations: P.iter, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const packed = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(P.iv) }, key, b64(P.data));   // password errata: eccezione
+  return await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
+async function prova(pw, auto) {
+  $("go").disabled = true; $("msg").className = ""; $("msg").textContent = "Apro…";
+  const rem = $("rem").checked;
+  try {
+    const html = await apri(pw);
+    if (!auto) store.set(rem ? pw : null);
+    document.open(); document.write(html); document.close();
+  } catch (e) {
+    const wrong = e && e.name === "OperationError";
+    if (auto) store.set(null);
+    $("msg").className = "err";
+    $("msg").textContent = wrong ? (auto ? "La password è cambiata: inserisci quella nuova." : "Password errata.")
+      : "Questo browser non riesce ad aprire la pagina (" + (e && e.message || e) + "). Prova ad aggiornarlo.";
+    $("go").disabled = false; $("pw").focus();
+  }
+}
+$("f").addEventListener("submit", e => { e.preventDefault(); prova($("pw").value, false); });
+if (!P) { $("msg").className = "err"; $("msg").textContent = "Pagina non ancora generata."; $("go").disabled = true; }
+else if (!window.crypto?.subtle || typeof DecompressionStream === "undefined") { $("msg").className = "err"; $("msg").textContent = "Browser troppo vecchio: aggiornalo per aprire la pagina."; $("go").disabled = true; }
+else { const saved = store.get(); if (saved) prova(saved, true); }
+})();
+</script>
+</body>
+</html>
